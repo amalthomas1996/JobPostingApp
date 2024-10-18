@@ -4,31 +4,22 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 
 const register = async (req, res) => {
+  const { companyName, email, password, mobile } = req.body;
+
   try {
-    const { companyName, email, password, mobile } = req.body;
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists!" });
+    }
 
-    const userExists = await User.findOne({ email });
-    if (userExists) return res.status(400).json({ message: 'User already exists' });
+    // Create a new user
+    const newUser = new User({ companyName, email, password, mobile });
+    await newUser.save();
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ companyName, email, password: hashedPassword, mobile });
-
-    // Send verification email (simplified)
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
-    });
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: user.email,
-      subject: 'Verify your email',
-      text: 'Please verify your email by clicking on the following link: ...'
-    };
-    transporter.sendMail(mailOptions);
-
-    res.status(201).json({ message: 'User registered. Verification email sent.' });
+    res.status(201).json({ message: "Registration successful!" });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Registration failed." });
   }
 };
 
